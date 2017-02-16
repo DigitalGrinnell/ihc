@@ -1101,7 +1101,8 @@ function ihc_drush_collect_object_health($pid) {
     if ($node = $mx->query('/mods:mods/mods:relatedItem[not(@displayLabel)]/mods:identifier')) {
       foreach ($node as $n) {
         ++$count;
-        $content .= ", $n";
+        $v = $n->nodeValue;
+        $content .= ", $v";
       }
       if ($count > 0) {
         $cell = "[$count] " . substr(trim($content, ' ,'), 0, 255);
@@ -1135,11 +1136,11 @@ function ihc_drush_collect_object_health($pid) {
   // Report the object's handle (HDL) value from the MODS record.
   $cell = 'None';
   if (isset($object['MODS'])) {
-    $count = 0;
-
     if ($node = $mx->query('/mods:mods/mods:identifier[@type="hdl"]')) {
       if (count($node) > 0) {
-        $cell = (string) $node[0];
+        foreach ($node as $n) {
+          $cell = $n->nodeValue;
+        }
       } else {
         $cell = 'None';
       }
@@ -1167,7 +1168,9 @@ function ihc_drush_collect_object_health($pid) {
 
     if ($node = $mx->query('/mods:mods/mods:extension/mods:creators')) {
       if (count($node) > 0) {
-        $cellP = (string) $node[0];
+        foreach ($node as $n) {
+          $cellP = $n->nodeValue;
+        }
       } else {
         $cellP = 'None';
       }
@@ -1175,7 +1178,9 @@ function ihc_drush_collect_object_health($pid) {
 
     if ($node = $mx->query('/mods:mods/mods:originInfo/mods:dateCreated')) {
       if (count($node) > 0) {
-        $cellR = (string) $node[0];
+        foreach ($node as $n) {
+          $cellR = $n->nodeValue;
+        }
       } else {
         $cellR = 'None';
       }
