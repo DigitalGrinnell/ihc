@@ -1,0 +1,695 @@
+<?php
+
+/* $Id$
+ * =============================================================================
+ * Module for checking and reporting on the health of the objects and datastreams
+ * found in an Islandora (Fedora) repository.
+ * 
+ * Authors:  Mark A. McFate
+ * Attention:  Some functions here may be somewhat specific to Digital Grinnell!
+ * 
+ *
+ */
+
+// Define functions to return ordered static data like custom colors, font 
+// codes, and header labels...and their rank order.  
+
+function ihcLimit( ) {
+  $limit = 'Q';
+  variable_set('orLimit', $limit);
+  return $limit;
+}
+
+function ihcCodes( ) {
+  static $codes = array('RED'=>'FFADAD', 'ORANGE'=>'FE9A2E', 'YELLOW'=>'FFFF66', 
+    'GREEN'=>'99FF99', 'BOLD'=>'STRONG', 'SOFT'=>'B8B8B8', 'NORMAL'=>'NORMAL');
+  return $codes;
+}
+
+function ihcCodeRank( ) {
+  return array_keys(ihcCodes( ));
+}
+
+function ihcColumns($firstColumn, $lastColumn=NULL, $preserveKeys=TRUE) {
+  static $columns = array( 'NULL',
+    'PID No.',                      // A  ...always reported
+    'Full PID',                     // B  ...always reported
+    'Object Title',                 // C  ...always reported
+    'CModels',                      // D
+    'Parent',                       // E
+    'OBJ MIME',                     // F
+    'Constituents (from RI)',       // G
+    'Child Objects',                // H
+    'Created Date',                 // I
+    'Modified Date',                // J
+    'isPartOf Reference',           // K
+    'No. DC.descriptions',          // L
+    'OBJ Size',                     // M
+    'Object Handle (HDL)',          // N
+    'isViewableByRole',             // O
+    'Creators (extension)',         // P
+    'CompoundTN Status',            // Q
+  );
+
+  if (!is_null($lastColumn)) {
+    $numColumns = $lastColumn - $firstColumn + 1;
+  } else {
+    $numColumns = NULL;
+  }
+  return array_slice($columns, $firstColumn, $numColumns, $preserveKeys);  
+}
+
+function ihcColWidth($col) {
+  static $width = array(0=>0,
+    'A'=>6,  'B'=>14, 'C'=>40,  'D'=>20, 'E'=>20,
+    'F'=>16, 'G'=>16, 'H'=>16, 'I'=>12, 'J'=>12,
+    'K'=>24, 'L'=>6, 'M'=>12,  'N'=>30, 'O'=>12,
+    'P'=>20, 'Q'=>14);
+  return $width[$col];
+}
+
+/**
+ * Implements hook_init.
+ * 
+ * @return type
+ */
+function ihc_init( ) {
+  /*
+  module_load_include('inc', 'repository_control');
+  module_load_include('inc', 'repository_control', 'log_record');
+  module_load_include('inc', 'repository_control', 'csv_cells');
+  module_load_include('inc', 'repository_control', 'object_record');
+  */
+  module_load_include('inc', 'icu', 'log_record');
+  module_load_include('inc', 'icu', 'csv_cells');
+  module_load_include('inc', 'icu', 'object_record');
+  module_load_include('inc', 'phpexcel');
+  module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
+  module_load_include('inc', 'islandora_paged_content', 'includes/manage_pages');
+  module_load_include('inc', 'ihc', 'ihc_constants');
+  return;
+}
+
+/** 
+ * Implements hook_help.
+ * 
+ * @param type $path
+ * @param type $arg
+ * @return type
+ */
+function ihc_help($path, $arg) {
+  if ($path == 'admin/help#ihc') {
+    return t('Islandora Health Check allows a site administrator to report on, and subsequently act on, the health of a repository.');
+  }
+}
+
+/**
+ * Implements hook_phpexcel_export.
+ *
+ * This function examines the contents of each cell, before it is 'printed' into
+ * the XSLX file, and sets the cell format based on the content.  Supported codes
+ * in the cells produce the following effects in rank order...
+ *
+ * %RED% - Sets cell background fill to red (#FFADAD).
+ * %YELLOW% - Sets cell background fill to yellow (#FFFF66).
+ * %GREEN% - Sets cell background fill to green (#99FF99).
+ * %BOLD% - Bold black font.
+ * %SOFT% - Subdued or 'greyed out' cell font (#B8B8B8).
+ * %NORMAL% - No formatting.
+ *
+ * %WIDTH:xx% - Set the column width to xx.  Usually appears in the first row of data.
+ *
+ * The format code is removed from the cell content before printing and a cell
+ * can contain ONLY ONE CODE!
+ *
+ * @param type $op
+ * @param type $data
+ * @param type $phpexcel
+ * @param type $options
+ * @param type $column
+ * @param type $row
+ */
+function ihc_phpexcel_export($op, &$data, $phpexcel, $options, $column=NULL, $row=NULL) {
+  $matches = array( );
+
+  switch($op) {
+    case 'pre cell' :
+
+      // If $row ONE...set column width.
+      if ($row === 1) {
+        if ($column > 0) {
+          $col = substr('_ABCDEFGHIJKLMNOPQRSTUVWXYZ', $column, 1);
+          $width = ihcColWidth($col);
+          $phpexcel->getColumnDimension($col)->setWidth($width);
+        } else {
+          $phpexcel->freezePane('A2');
+        }
+      }
+
+      // If a code was found...
+      if (preg_match('/^%(.+)%(.+)$/', $data, $matches)) {
+        $code = $matches[1];
+
+        switch($code) {
+          case 'RED' :
+          case 'ORANGE' :
+          case 'YELLOW' :
+          case 'GREEN' :
+            $codes = ihcCodes( );
+            $style = PHPExcel_Style_Fill::FILL_SOLID;
+            $phpexcel->getStyleByColumnAndRow($column,$row)->getFill()->
+            applyFromArray(array('type'=>$style, 'startcolor'=>array('rgb'=>$codes[$code])));
+            break;
+          case 'BOLD' :
+            $phpexcel->getStyleByColumnAndRow($column,$row)->getFont()->setBold(TRUE);
+            break;
+          case 'SOFT' :
+            $codes = ihcCodes( );
+            $phpexcel->getStyleByColumnAndRow($column,$row)->getFont()->getColor()->setRGB($codes['SOFT']);
+            break;
+          case 'NORMAL' :
+            // Nothing to do here...no formatting.
+            break;
+        }
+        $data = $matches[2];
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook form.
+ * 
+ * @param type $form
+ * @param type $form_state
+ * @return type
+ */
+function ihc_main_form($form, &$form_state) {
+
+  // Build the form select field.
+  $form['files'] = array(
+    '#type' => 'select',
+    '#title' => t('Select one XLSX report to open and SUBMIT, or CANCEL to return HOME.'),
+    '#options' => array( ),
+  );
+
+  // Fetch all the *.xlsx files from the public:// path.
+  $files = scandir('public://');
+
+  // Write each XLSX filename to the select options.
+  foreach ($files as $fname) {
+    if (strpos("_$fname", '.') === 1) { continue; }  // ignore dot files
+    if (strpos("_$fname", '~') === 1) { continue; }  // ignore file names beginning with a tilde
+    if (stripos($fname, '.xlsx') > 0) {
+      $form['files']['#options'][$fname] = $fname;
+    }
+  }
+
+  $form['files']['#size'] = count($form['files']['#options']);
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('SUBMIT'),
+  );
+
+  $form['cancel'] = array(
+    '#type' => 'submit',
+    '#value' => t('CANCEL'),
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_form_validate.
+ *  
+ * @param type $form
+ * @param type $form_state
+ * @return type
+ */
+function ihc_main_form_validate($form, &$form_state) {
+  return;
+}
+
+/**
+ * Implements hook_form_submit.
+ * 
+ * @param type $form
+ * @param type $form_state
+ * @return type
+ */
+function ihc_main_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] === "CANCEL") {
+    drupal_goto('<front>');
+  } else {   // SUBMIT was clicked...open the selected file in Excel.
+    $path = file_create_url("public://".$form_state['values']['files']);
+    drupal_goto($path, array('target' => '_blank'));
+  }
+  return;
+}
+
+/**
+ * Implements hook_menu().
+ * 
+ * @return type
+ */
+function ihc_menu( ) {
+  $items = array();
+  $items['ihc'] = array(
+      'title' => 'Islandora Health Check',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('ihc_main_form'),
+      'description' => 'Islandora Health Check',
+      'access arguments' => array('administer users'),
+      'type' => MENU_NORMAL_ITEM,
+      'menu_name' => 'Management',
+  );
+  return $items;
+}
+
+/**
+ * Open the repository for the rest of FHC to use.  A wrapper for icu_Repository().
+ * 
+ * @return FedoraRepository
+ *
+ */
+function ihc_repo( ) {
+  module_load_include('inc', 'icu', 'icu');
+  return icu_Repository();
+}
+
+/**
+ * Identify missing datastreams for one existing object.
+ * 
+ * @param FedoraObject $object
+ * @param string $cModel
+ */
+function ihc_identify_missing_datastreams($object, $cModel) {
+  $missing = '';
+  $mCountR = 0;
+  
+  // Check first for all required datastreams.        
+  $required = array('MODS','DC','OBJ','TN');
+  foreach ($required as $requiredDS) {
+    if (!$object[$requiredDS]) { 
+      $missing .= "$requiredDS "; 
+      ++ $mCountR; 
+    }
+  }
+    
+  // Now, given the cModel, check for missing derivatives.
+  switch ($cModel) {
+    case 'sp_pdf' :
+      $derivatives = array('FULL_TEXT','TECHMD','PREVIEW');
+      break;
+    case 'sp_large_image_cmodel' :
+      $derivatives = array('JPG','JP2','TECHMD'); 
+      break;
+    case 'sp_basic_image' :
+      $derivatives = array('MEDIUM_SIZE','TECHMD');
+      break;
+    case 'sp-audioCModel' :
+      $derivatives = array('PROXY_MP3','TECHMD');
+      break;
+    case 'sp_videoCModel' :
+      $derivatives = array('TECHMD_FITS','TECHMD','MP4');
+      break;
+    case 'bookCModel' :
+      $derivatives = array('PDF'); 
+      $missing = str_replace('OBJ ','',$missing);  // No OBJ required here.
+      -- $mCountR;
+      break;
+    case 'pageCModel' :
+      $derivatives = array('PDF','TIFF','JPG','OCR','JP2','RAW_HOCR','HOCR'); 
+      $missing = str_replace('MODS ','',$missing);  // No MODS required here.
+      -- $mCountR;
+      break;
+    case 'compoundCModel' :
+      $derivatives = array( );   // None required
+      $missing = str_replace('OBJ ','',$missing);  // No OBJ required here.
+      -- $mCountR;
+      break;
+    case 'binaryObjectCModel' :
+      $derivatives = array( );   // None required
+      $missing = str_replace('TN ','',$missing);  // No TN required here.
+      -- $mCountR;
+      break;
+    case 'sp_web_archive' :
+      $derivatives = array('PDF','WARC_CSV','WARC_FILTERED','PNG','JPG','MEDIUM_SIZE');
+      break;
+  }
+  
+  // Count and identify missing derivatives.
+  $mCTotal = $mCountR;
+  if (!empty($derivatives)) {
+    foreach ($derivatives as $d) {
+      if (!$object[$d]) { 
+        $missing .= "$d "; 
+        ++ $mCTotal;
+      }
+    }
+  }
+
+  // Report all the missing...
+  if ($mCountR > 0) {
+    $missing = "[$mCTotal] $missing!";  // ! indicates that required are among the missing
+  } else if ($mCTotal > 0) {
+    $missing = "[$mCTotal] $missing";   // no !, only derivatives missing
+  } else {
+    $missing = '';
+  }
+
+  return trim($missing);
+}
+
+/**
+ * Special case formatting of health check data.
+ *
+ * @param type $oldContent
+ * @return type
+ */
+function ihc_special_case2($oldContent) {
+  module_load_include('inc', 'icu', 'icu');
+
+  if (empty($oldContent)) { return FALSE; }
+  $jpegs = $tiffs = 0;
+  list($n, $content) = icu_get_count_and_content($oldContent);
+  if (empty($content) || (count($content) < 2)) { return FALSE; }
+
+  foreach ("$content" as $token) {
+    list($mime, $count) = explode(':', $token);
+    if (in_array($mime, array('image/jpeg','image/jpg'))) {
+      $jpegs += $count;
+    } else if (in_array($mime, array('image/tiff','image/tif'))) {
+      $tiffs += $count;
+    }
+  }
+  return ((($jpegs === $tiffs) && ($jpegs > 0)) ? TRUE : FALSE);
+}
+
+/**
+ * Apply assessment rules to one row ($columns) of data.
+ * 
+ * @param array $columns
+ *    The row of data to be analyzed.
+ * @return array
+ *   An associative array of format codes in $column => $code form.
+ */
+function ihc_apply_rules(array $columns) {
+  module_load_include('inc', 'icu', 'icu');
+
+  $row = array( );
+  $isGreen = TRUE;
+  
+  // Get the object...
+  $pid = $columns[2];
+  if ($pid === '*None*') {
+    $row[2] = 'SOFT'; 
+    return $row;
+  }
+  
+  // Not skipped, eh?  Check the object state and report.
+  if (!empty($columns[3])) {
+    list($fixed, $state) = icu_get_count_and_content($columns[3]);
+    if ($state != "A") { 
+      $row[2] = 'SOFT'; 
+      return $row;
+    }
+  }
+  
+  // Ok, we have an active object...get busy.  Start by reporting some basic info. 
+  $row[2] = 'BOLD';
+  
+  // Report the total number of datastreams.
+  if (!empty($columns[4])) {
+    $nDS = $columns[4]; 
+    if ($nDS > 19) { $row[4] = 'YELLOW'; }
+  }
+  
+  // Check the CModels.  If no RELS-EXT...report that here.
+  if (!empty($columns[5])) {
+    $cm = $columns[5];
+    if ($cm === '*No RELS-EXT*') {
+      $row[5] = 'RED';
+      $isGreen = FALSE;
+      return;
+    } else {
+      list($nCM, $cModel) = icu_change_object_cmodel($cm);
+      if ($nCM > 2) {
+        $row[5] = 'RED'; 
+        $isGreen = FALSE;
+      } else if ($nCM != 1 ) {
+        $row[5] = 'YELLOW'; 
+      }
+    }
+  }
+  
+  // Fetch and report all the parent (isMemberOfCollection, isConstituentOf and 
+  // isPageOf) relationships.
+  if (!empty($columns[6])) {
+    list($nRel, $parent) = icu_change_object_cmodel($columns[6]);
+    if ($nRel > 2) {    // more than two parents, not good.
+      $row[6] = 'RED';
+      $isGreen = FALSE;
+    }
+  }
+  
+  // Check the OBJ datastream.
+  if (!empty($columns[7])) {  
+    $OBJMimes = icu_OBJMimes( );
+    $mime = $columns[7];
+    if (!isset($OBJMimes[$cModel])) {
+      $row[7] = 'YELLOW';               // better check our icu_OBJMimes list!
+    } else {
+      $expected = $OBJMimes[$cModel];
+      if ($mime != $expected) { 
+        $row[7] = 'RED';                // red if not the expected type
+        $isGreen = FALSE;
+      }
+    }
+  }
+
+  // Bad mimes...always red if not blank.
+  if (!empty($columns[8])) {
+    $bad = $columns[8];
+    if (strlen($bad) > 0 ) { 
+      $row[8] = 'RED'; 
+      $isGreen = FALSE;
+    }
+  }
+  
+  // Other DSIDs, $row[9], is OK, no rules to apply.
+  
+  // Missing datastreams...red for ! missing required DS, yellow otherwise.
+  // Except... RAW_HOCR's are not absolutely required, neither are TECHMDs.
+  static $allowed = array('[1] TECHMD', '[1] RAW_HOCR');
+
+  if (!empty($columns[10])) {
+    $missing = $columns[10];
+    if (strlen($missing) > 0 ) { 
+      if (strstr($missing, '!')) {
+        $row[10] = 'RED'; 
+        $isGreen = FALSE;
+      } else if (!in_array($missing, $allowed)) {
+        $row[10] = 'YELLOW';
+      } else {
+        $row[10] = 'NORMAL';
+      }
+    }
+  }
+  
+  // Check for old content issues.
+  if (!empty($columns[11])) {
+    if (strlen($columns[11]) < 1) {
+      $row[11] = 'YELLOW';           // No old content?
+      $count = 0;
+    }
+        
+    // If the OLD content count is greater than 1 and this is not a compoundCModel...big problem!
+    if ($count > 1 && $cModel != 'compoundCModel') { 
+      $row[5] = 'RED'; 
+      $isGreen = FALSE;
+    }
+  }
+
+  // Check for bad isPartOf references and set cell yellow if any are found.
+
+  if (!empty($columns[13])) {
+    list($nPart, $content) = icu_get_count_and_content($columns[13]);
+    $parts = explode(',', $content);
+    if ($nPart != count($parts)) {          // number of reported isPartOf is inconsistent
+      $row[13] = 'YELLOW';
+    } else {
+      foreach ($parts as $part) {
+        if (preg_match('/^grinnell\:/', trim($part))) {  // this is an old grinnell: object reference.  Not right!
+          $row[13] = 'YELLOW';
+        } else if (preg_match('/^grinnell\-auth\:/', trim($part))) {   // this is an old grinnell-auth: object reference.  Not right!
+          $row[13] = 'YELLOW';
+        } else if (!preg_match('/.+\:.+/', trim($part))) {  // no colon present...this isn't even a proper reference!
+          $row[13] = 'RED';
+        }
+      }
+    }
+  }
+
+  // Check for NO dc.description.  Unless this is a pageCModel we have a problem.
+
+  $nDC = 0;
+  if (!empty($columns[14])) { list($nDC, $content) = icu_get_count_and_content($columns[14]); }
+  if ($nDC < 1 && $cModel != 'pageCModel') {
+    $row[14] = 'YELLOW';
+    $isGreen = FALSE;
+  }
+
+  // Mark special circumstances in ORANGE.
+  //
+
+  // Get the object's cModel (and CM count).
+  list($nCM, $cModel) = icu_get_count_and_content($columns[5]);
+  $pid = $columns[2];
+
+  // 1) Any object with a mis-match of legitimate children and constituents.  These should be RED!
+  // But consider these conditions...
+  //   a) An object with NO constituents is legit if it had only one old content datastream and is not tagged as compound.
+  //   b) A pageCModel object will have NO constituents, but should have 3 old content datastreams.
+  //   c) A bookCModel should have one content datastream, but more than one constituent.
+
+  list($nCol, $collection) = icu_get_count_and_content($columns[6]);
+  list($nK, $oldKids) = icu_get_count_and_content($columns[11]);
+  list($nC, $constituents) = icu_get_count_and_content($columns[12]);
+
+  if ($nK != $nC) {
+
+    // Check for case a.
+    if ($nC === 0 && $nK === 1) {             // this condition is OK, except if the $cModel is compoundCModel.
+      if ($cModel === 'compoundCModel') {
+        $row[5] = 'RED';
+        $row[12] = 'RED';
+        $isGreen = FALSE;
+      }
+
+      // Check for case b.
+    } else if ($cModel === 'pageCModel') {
+      if ($nK != 3 && $nC > 0) {
+        $row[5] = 'RED';
+        $row[12] = 'RED';
+        $isGreen = FALSE;
+      }
+
+
+    // Check for case C.
+    } else if ($cModel === 'bookCModel') {
+      if ($nK != 1 || $nC < 2) {
+        $row[5] = 'RED';
+        $row[12] = 'RED';
+        $isGreen = FALSE;
+      }
+
+    // All others are suspect.
+    } else {
+      $pending = "# Applying rule 1.\ndrush ficM $pid --replace --collection=$collection\n";
+      file_put_contents("public://pending_drush_commands.sh", $pending, FILE_APPEND);
+      $row[11] = 'RED';
+      $row[12] = 'RED';
+      $isGreen = FALSE;
+    }
+  }
+
+  // 2) A non-compound, non-book object with constituents!  If the object has an OBJ and only one
+  //    legitimate content datastream, then we need to delete the constituents.
+  //
+
+  if ($nK == 1 && $nC > 0 && $cModel != 'compoundCModel' && $cModel != 'bookCModel') {
+    $row[5] = 'ORANGE';
+    $isGreen = FALSE;
+
+    if ($nCM == 1) {
+      $OBJMimes = icu_OBJMimes();
+      if ($columns[7] === $OBJMimes[$cModel]) {   // the object has the right OBJ type..good-to-go for deletion of the bogus kids
+        $parts = explode(',' , $constituents);
+        foreach ($parts as $part) {
+          if (preg_match('/^(\d+)\-(\d+)$/', $part, $matches)) {    // got a range of objects
+            $pending = "# Applying rule 2.\ndrush ihcF $matches[1] $matches[2] PURGE\n";
+          } else {                                                    // got a single object
+            $pending = "# Applying rule 2.\ndrush ihcF $part $part PURGE\n";
+          }
+          file_put_contents("public://pending_drush_commands.sh", $pending, FILE_APPEND);
+        }
+      }
+    }
+  }
+
+  // 3) A compound object with the same number of TIFF and JPEG pairs.
+  //
+
+  if ($cModel == 'compoundCModel' && ihc_special_case2($columns[11])) {   // Special case 2... TIFF/JPEG pairs!
+    $row[2] = 'ORANGE';    
+    $isGreen = FALSE;
+  }
+
+  // 4) A compound object with only one legitimate constituent and one legit content datastream!
+
+  if ($cModel === 'compoundCModel') {
+    if ($nK == $nC && $nC == 1) {
+      $row[5] = 'ORANGE';
+      $isGreen = FALSE;
+      $ns = variable_get('icg_namespace');
+      $pending = "# Applying rule 4.\ndrush ihcS SingleCompound $ns$columns[1] $ns$constituents\n";
+      file_put_contents("public://pending_drush_commands.sh", $pending, FILE_APPEND);
+    }
+  }
+
+  // If $isGreen is TRUE, set the full PID to green!
+  if ($isGreen) { $row[2] = 'GREEN'; } 
+      
+  return $row;
+}
+
+/**
+ * Fill a row of the worksheet ($filled) with existing data and format codes.
+ *
+ * Fill undefined/empty cells in the CSV data with 'NONE' for reporting.
+ * 
+ * @param array $columns
+ *   Associative array of $col => $data pairs.
+ * @param array $codes
+ *   Associative array of $col => $code pairs.
+ *
+ * @return array
+ */
+function ihc_fill_sheet($columns, $codes) {
+  static $previous = 0;
+  $filled = array( );
+  $max = max(array_keys($columns));
+
+  for ($c=1; $c<=$max; $c++) {
+
+    // Use column 1 to check for gaps in numbering.
+    if ($c == 1) {
+      if ($previous == 0) {
+        $codes[1] = 'ORANGE';
+      } else {
+        $change = intval($columns[1]) - $previous;
+        if ($change > 4) {
+          $codes[1] = 'ORANGE';
+        } else if ($change > 1) {
+          $codes[1] = 'YELLOW';
+        } else {
+          unset($codes[1]);
+        }
+      }
+      $previous = intval($columns[1]);
+    }
+
+    // Now, apply the codes.
+    if (empty($columns[$c])) {
+      $filled[$c-1] = '%SOFT%NONE';
+    } else if (isset($codes[$c])) {
+      $filled[$c-1] = '%'.$codes[$c].'%'.$columns[$c];
+    } else {
+      $filled[$c-1] = $columns[$c];
+    }
+  }
+  return $filled;
+}
+
