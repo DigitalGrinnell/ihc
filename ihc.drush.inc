@@ -1085,15 +1085,20 @@ function ihc_drush_collect_object_health($pid) {
     break;
   }
 
+  // Prep to search MODS
+  if (isset($object['MODS'])) {
+    $mods = $object['MODS']->content;
+    $xml = new DOMDocument;
+    $xml->loadXML($mods);
+    $mx = new DOMXPath($xml);
+    $mx->registerNamespace($mods_ns, $mods_nsU);
+  }
+
   // Dump any/all MODS isPartOf relations that use identifiers (authorities).
   $content = $cell = '';
   if (isset($object['MODS'])) {
-    $mods = $object['MODS']->content;
     $count = 0;
-    // drush_log(__FUNCTION__." opening MODS record of object $pid.", 'status');
-    $xml = new SimpleXMLElement($mods);       // convert MODS content to searchable XML
-
-    if ($node = $xml->xpath('/mods:mods/mods:relatedItem[not(@displayLabel)]/mods:identifier')) {
+    if ($node = $mx->query('/mods:mods/mods:relatedItem[not(@displayLabel)]/mods:identifier')) {
       foreach ($node as $n) {
         ++$count;
         $content .= ", $n";
@@ -1130,11 +1135,9 @@ function ihc_drush_collect_object_health($pid) {
   // Report the object's handle (HDL) value from the MODS record.
   $cell = 'None';
   if (isset($object['MODS'])) {
-    $mods = $object['MODS']->content;
     $count = 0;
-    $xml = new SimpleXMLElement($mods);      // convert MODS content to searchable XML
 
-    if ($node = $xml->xpath('/mods:mods/mods:identifier[@type="hdl"]')) {
+    if ($node = $mx->query('/mods:mods/mods:identifier[@type="hdl"]')) {
       if (count($node) > 0) {
         $cell = (string) $node[0];
       } else {
@@ -1160,11 +1163,9 @@ function ihc_drush_collect_object_health($pid) {
   // Report Creators extensions and /mods:mods/mods:originInfo/mods:dateCreated or INDEX date.
   $cellP = $cellR = 'None';
   if (isset($object['MODS'])) {
-    $mods = $object['MODS']->content;
     $count = 0;
-    $xml = new SimpleXMLElement($mods);      // convert MODS content to searchable XML
 
-    if ($node = $xml->xpath('/mods:mods/mods:extension/mods:creators')) {
+    if ($node = $mx->query('/mods:mods/mods:extension/mods:creators')) {
       if (count($node) > 0) {
         $cellP = (string) $node[0];
       } else {
@@ -1172,7 +1173,7 @@ function ihc_drush_collect_object_health($pid) {
       }
     }
 
-    if ($node = $xml->xpath('/mods:mods/mods:originInfo/mods:dateCreated')) {
+    if ($node = $mx->query('/mods:mods/mods:originInfo/mods:dateCreated')) {
       if (count($node) > 0) {
         $cellR = (string) $node[0];
       } else {
