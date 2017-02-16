@@ -28,6 +28,7 @@
  *   O = 15 = RELS-EXT isViewableByRole value                   --Standard report
  *   P = 16 = Creators (extension)
  *   Q = 17 = CompoundTN status
+ *   R = 18 = MODS dateCreated (Index Date)
  *
  * A 'standard' (default) report will include --reportColumns=ABCDEFIJMO
  * A 'special' report will include --reportColumns=ABCDGHNPQ
@@ -744,12 +745,20 @@ function ihc_drush_apply_rules(array $columns) {
     }
   }
 
-  // Check for Creators.
-  $row['P'] = 'NORMAL';
+  // Check for Creators and dateCreated.
+  $row['P'] = $row['R'] = 'NORMAL';
   if (!empty($columns['P'])) {
     $val = $columns['P'];
     if ($val === "None" && $cModel != 'pageCModel') {
       $row['P'] = 'ORANGE';
+    }
+  }
+  if (!empty($columns['R'])) {
+    $val = $columns['R'];
+    if ($val === "None" && $cModel != 'pageCModel') {
+      $row['R'] = 'ORANGE';
+    } elseif (length($val) != 4) {
+      $row['R'] = 'RED';
     }
   }
 
@@ -1148,8 +1157,8 @@ function ihc_drush_collect_object_health($pid) {
     $data['O'] = "None";
   }
 
-  // Report Creators extensions.
-  $cell = 'None';
+  // Report Creators extensions and /mods:mods/mods:originInfo/mods:dateCreated or INDEX date.
+  $cellP = $cellR = 'None';
   if (isset($object['MODS'])) {
     $mods = $object['MODS']->content;
     $count = 0;
@@ -1157,13 +1166,23 @@ function ihc_drush_collect_object_health($pid) {
 
     if ($node = $xml->xpath('/mods:mods/mods:extension/mods:creators')) {
       if (count($node) > 0) {
-        $cell = (string) $node[0];
+        $cellP = (string) $node[0];
       } else {
-        $cell = 'None';
+        $cellP = 'None';
+      }
+    }
+
+    if ($node = $xml->xpath('/mods:mods/mods:originInfo/mods:dateCreated')) {
+      if (count($node) > 0) {
+        $cellR = (string) $node[0];
+      } else {
+        $cellR = 'None';
       }
     }
   }
-  $data['P'] = $cell;
+
+  $data['P'] = $cellP;
+  $data['R'] = $cellR;
 
 
   // Count the number of /mods:mods/mods:titleInfo[not(@*)] values, and the number of

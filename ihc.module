@@ -15,7 +15,7 @@
 // codes, and header labels...and their rank order.  
 
 function ihcLimit( ) {
-  $limit = 'Q';
+  $limit = 'R';
   variable_set('orLimit', $limit);
   return $limit;
 }
@@ -49,6 +49,7 @@ function ihcColumns($firstColumn, $lastColumn=NULL, $preserveKeys=TRUE) {
     'isViewableByRole',             // O
     'Creators (extension)',         // P
     'CompoundTN Status',            // Q
+    'Index Date',                   // R
   );
 
   if (!is_null($lastColumn)) {
@@ -62,9 +63,9 @@ function ihcColumns($firstColumn, $lastColumn=NULL, $preserveKeys=TRUE) {
 function ihcColWidth($col) {
   static $width = array(0=>0,
     'A'=>6,  'B'=>14, 'C'=>40,  'D'=>20, 'E'=>20,
-    'F'=>16, 'G'=>16, 'H'=>16, 'I'=>12, 'J'=>12,
-    'K'=>24, 'L'=>6, 'M'=>12,  'N'=>30, 'O'=>12,
-    'P'=>20, 'Q'=>14);
+    'F'=>16, 'G'=>16, 'H'=>16,  'I'=>12, 'J'=>12,
+    'K'=>24, 'L'=>6,  'M'=>12,  'N'=>30, 'O'=>12,
+    'P'=>20, 'Q'=>14, 'R'=>10);
   return $width[$col];
 }
 
