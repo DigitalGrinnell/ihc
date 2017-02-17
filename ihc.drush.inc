@@ -757,7 +757,7 @@ function ihc_drush_apply_rules(array $columns) {
     $val = $columns['R'];
     if ($val === "None" && $cModel != 'pageCModel') {
       $row['R'] = 'ORANGE';
-    } elseif (length($val) != 4) {
+    } elseif (strlen($val) != 4) {
       $row['R'] = 'RED';
     }
   }
