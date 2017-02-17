@@ -184,13 +184,13 @@ function drush_ihc_ihcReport($first, $file=NULL) {
   $headers = array( );
 
   // Check for a --reportColumns option.
-  $reportCol = drush_get_option('reportColumns', 'ABCDEFGHIJKLMNOPQ');
+  $reportCol = drush_get_option('reportColumns', 'ABCDEFGHIJKLMNOPQR');
   if ($reportCol === 'standard') {
-    $reportCol = 'ABCDEFIJMO';
+    $reportCol = 'ABCDEFIJMOR';
   } else if ($reportCol === 'special') {
     $reportCol = 'ABCDGHNPQ';
   } else if ($reportCol === 'full') {
-    $reportCol = 'ABCDEFGHIJKLMNOPQ';
+    $reportCol = 'ABCDEFGHIJKLMNOPQR';
   }
   $reportColumns = str_split($reportCol, 1);
 
