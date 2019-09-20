@@ -270,14 +270,16 @@ function ihc_menu( ) {
 
 /**
  * Open the repository for the rest of FHC to use.  A wrapper for icu_Repository().
+ * Attention! Replace all calls to 'ihc_repo()' with '_idu_Repository()'
  *
  * @return FedoraRepository
  *
- */
-function ihc_repo( ) {
-  module_load_include('inc', 'idu', 'icu');
-  return icu_Repository();
-}
+ *
+ * function ihc_repo( ) {
+ *   module_load_include('inc', 'idu', 'icu');
+ *   return icu_Repository();
+ * }
+*/
 
 /**
  * Identify missing datastreams for one existing object.

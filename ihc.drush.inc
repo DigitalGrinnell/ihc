@@ -888,7 +888,7 @@ function ihc_drush_collect_object_health($pid) {
   $r = intval($pidn);
 
   try {
-    $object = ihc_repo()->getObject($pid);
+    $object = _idu_Repository()->getObject($pid);
   } catch (Exception $e) {
     return FALSE;                 // for any exception...skip this PID
   }
@@ -1056,7 +1056,7 @@ function ihc_drush_collect_object_health($pid) {
   $data['J'] = $cell; */
 
   // Fetch some $object data.  Namely the create and modified dates of the object.
-  $foxml = ihc_repo( )->api->m->export($pid,
+  $foxml = _idu_Repository( )->api->m->export($pid,
     array('format' => 'info:fedora/fedora-system:FOXML-1.1',
       'context' => 'migrate',
       'encoding' => 'UTF-8')
