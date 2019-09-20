@@ -15,6 +15,7 @@ function or_connect( ) {
   static $orDB;
   if (!$orDB) {
     $opts = array(
+      'host'    => 'isle-mysql-dg',
       'user'    => 'isle_dg_user',
       'pass'    => 'R3allyL0ngDrupalPa$$w0rd',
       'db'      => 'object_records',
@@ -22,7 +23,7 @@ function or_connect( ) {
     );
     $orDB = new SafeMySQL($opts);
     if (!$orDB) {
-      die("Could not connect to the 'object_records' database!"); 
+      die("Could not connect to the 'object_records' database!");
     }
   }
   return $orDB;
