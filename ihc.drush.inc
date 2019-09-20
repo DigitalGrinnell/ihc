@@ -79,7 +79,7 @@ function drush_ihc_ihcModReset($pid) {
  *   First PID, with or without a 'namespace:' prefix, to process.
  */
 function drush_ihc_ihcCollect($first) {
-  module_load_include('inc', 'idu', 'object_record');
+  module_load_include('inc', 'ihc', 'object_record');
 
   list($ns, $pidn) = explode(':', $first);
   $functionStamp = __FUNCTION__.'_'.$ns;
@@ -123,7 +123,7 @@ function drush_ihc_ihcCollect($first) {
  *   First PID, with or without a 'namespace:' prefix, to process.
  */
 function drush_ihc_ihcAnalyze($first) {
-  module_load_include('inc', 'idu', 'object_record');
+  module_load_include('inc', 'ihc', 'object_record');
 
   list($ns, $pidn) = explode(':', $first);
   $functionStamp = __FUNCTION__.'_'.$ns;
@@ -173,7 +173,7 @@ function drush_ihc_ihcAnalyze($first) {
  *   is used.
  */
 function drush_ihc_ihcReport($first, $file=NULL) {
-  module_load_include('inc', 'idu', 'object_record');
+  module_load_include('inc', 'ihc', 'object_record');
 
   list($ns, $pidn) = explode(':', $first);
   if (!$pids = ihc_drush_prep($first)) { return; }     // Get the PIDs and initialize the loop..
@@ -1368,7 +1368,7 @@ function ihc_drush_post_to_file($comment, $command, $path=NULL) {
  *                   3) number of DG6 downloads, and 4) number of DG7 downloads.
  */
 function ihc_return_awstats($pid) {
-  module_load_include('inc', 'idu', 'object_record');
+  module_load_include('inc', 'ihc', 'object_record');
   if (is_null($pid) || stripos($pid, ':') < 2) { return array(0, 0, 0, 0); }
 
   // OK, collect the data.
