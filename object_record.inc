@@ -15,8 +15,8 @@ function or_connect( ) {
   static $orDB;
   if (!$orDB) {
     $opts = array(
-      'user'    => 'digital',
-      'pass'    => 'Grinne11',
+      'user'    => 'isle_dg_user',
+      'pass'    => 'R3allyL0ngDrupalPa$$w0rd',
       'db'      => 'object_records',
       'charset' => 'utf8'
     );
