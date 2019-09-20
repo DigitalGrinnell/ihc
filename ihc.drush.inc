@@ -445,7 +445,8 @@ function ihc_drush_help($command) {
 function ihc_drush_prep($pidSpec, $lastOp='2000-01-01T00:00:00Z') {
   module_load_include('inc', 'idu', 'icu_drush');
   $last = $pidn = $range = $namespace = 0;
-  return icu_drush_prep($pidSpec, $last, $pidn, $range, $namespace, $lastOp);
+  // return icu_drush_prep($pidSpec, $last, $pidn, $range, $namespace, $lastOp);
+  return idu_drush_prep($pidSpec, $last, $pidn, $range, $namespace);
 }
 
 /** Remaining functions in alphabetical order */
