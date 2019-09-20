@@ -21,7 +21,9 @@ function or_connect( ) {
       'charset' => 'utf8'
     );
     $orDB = new SafeMySQL($opts);
-    if (!$orDB) { die "Could not connect to the 'object_records' database!"; }
+    if (!$orDB) {
+      die("Could not connect to the 'object_records' database!"); 
+    }
   }
   return $orDB;
 }
