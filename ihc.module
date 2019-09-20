@@ -4,15 +4,15 @@
  * =============================================================================
  * Module for checking and reporting on the health of the objects and datastreams
  * found in an Islandora (Fedora) repository.
- * 
+ *
  * Authors:  Mark A. McFate
  * Attention:  Some functions here may be somewhat specific to Digital Grinnell!
- * 
+ *
  *
  */
 
-// Define functions to return ordered static data like custom colors, font 
-// codes, and header labels...and their rank order.  
+// Define functions to return ordered static data like custom colors, font
+// codes, and header labels...and their rank order.
 
 function ihcLimit( ) {
   $limit = 'R';
@@ -21,7 +21,7 @@ function ihcLimit( ) {
 }
 
 function ihcCodes( ) {
-  static $codes = array('RED'=>'FFADAD', 'ORANGE'=>'FE9A2E', 'YELLOW'=>'FFFF66', 
+  static $codes = array('RED'=>'FFADAD', 'ORANGE'=>'FE9A2E', 'YELLOW'=>'FFFF66',
     'GREEN'=>'99FF99', 'BOLD'=>'STRONG', 'SOFT'=>'B8B8B8', 'NORMAL'=>'NORMAL');
   return $codes;
 }
@@ -57,7 +57,7 @@ function ihcColumns($firstColumn, $lastColumn=NULL, $preserveKeys=TRUE) {
   } else {
     $numColumns = NULL;
   }
-  return array_slice($columns, $firstColumn, $numColumns, $preserveKeys);  
+  return array_slice($columns, $firstColumn, $numColumns, $preserveKeys);
 }
 
 function ihcColWidth($col) {
@@ -71,7 +71,7 @@ function ihcColWidth($col) {
 
 /**
  * Implements hook_init.
- * 
+ *
  * @return type
  */
 function ihc_init( ) {
@@ -81,9 +81,9 @@ function ihc_init( ) {
   module_load_include('inc', 'repository_control', 'csv_cells');
   module_load_include('inc', 'repository_control', 'object_record');
   */
-  module_load_include('inc', 'icu', 'log_record');
-  module_load_include('inc', 'icu', 'csv_cells');
-  module_load_include('inc', 'icu', 'object_record');
+  module_load_include('inc', 'idu', 'log_record');
+  module_load_include('inc', 'idu', 'csv_cells');
+  module_load_include('inc', 'idu', 'object_record');
   module_load_include('inc', 'phpexcel');
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
   module_load_include('inc', 'islandora_paged_content', 'includes/manage_pages');
@@ -91,9 +91,9 @@ function ihc_init( ) {
   return;
 }
 
-/** 
+/**
  * Implements hook_help.
- * 
+ *
  * @param type $path
  * @param type $arg
  * @return type
@@ -180,7 +180,7 @@ function ihc_phpexcel_export($op, &$data, $phpexcel, $options, $column=NULL, $ro
 
 /**
  * Implements hook form.
- * 
+ *
  * @param type $form
  * @param type $form_state
  * @return type
@@ -223,7 +223,7 @@ function ihc_main_form($form, &$form_state) {
 
 /**
  * Implements hook_form_validate.
- *  
+ *
  * @param type $form
  * @param type $form_state
  * @return type
@@ -234,7 +234,7 @@ function ihc_main_form_validate($form, &$form_state) {
 
 /**
  * Implements hook_form_submit.
- * 
+ *
  * @param type $form
  * @param type $form_state
  * @return type
@@ -251,7 +251,7 @@ function ihc_main_form_submit($form, &$form_state) {
 
 /**
  * Implements hook_menu().
- * 
+ *
  * @return type
  */
 function ihc_menu( ) {
@@ -270,41 +270,41 @@ function ihc_menu( ) {
 
 /**
  * Open the repository for the rest of FHC to use.  A wrapper for icu_Repository().
- * 
+ *
  * @return FedoraRepository
  *
  */
 function ihc_repo( ) {
-  module_load_include('inc', 'icu', 'icu');
+  module_load_include('inc', 'idu', 'icu');
   return icu_Repository();
 }
 
 /**
  * Identify missing datastreams for one existing object.
- * 
+ *
  * @param FedoraObject $object
  * @param string $cModel
  */
 function ihc_identify_missing_datastreams($object, $cModel) {
   $missing = '';
   $mCountR = 0;
-  
-  // Check first for all required datastreams.        
+
+  // Check first for all required datastreams.
   $required = array('MODS','DC','OBJ','TN');
   foreach ($required as $requiredDS) {
-    if (!$object[$requiredDS]) { 
-      $missing .= "$requiredDS "; 
-      ++ $mCountR; 
+    if (!$object[$requiredDS]) {
+      $missing .= "$requiredDS ";
+      ++ $mCountR;
     }
   }
-    
+
   // Now, given the cModel, check for missing derivatives.
   switch ($cModel) {
     case 'sp_pdf' :
       $derivatives = array('FULL_TEXT','TECHMD','PREVIEW');
       break;
     case 'sp_large_image_cmodel' :
-      $derivatives = array('JPG','JP2','TECHMD'); 
+      $derivatives = array('JPG','JP2','TECHMD');
       break;
     case 'sp_basic_image' :
       $derivatives = array('MEDIUM_SIZE','TECHMD');
@@ -316,12 +316,12 @@ function ihc_identify_missing_datastreams($object, $cModel) {
       $derivatives = array('TECHMD_FITS','TECHMD','MP4');
       break;
     case 'bookCModel' :
-      $derivatives = array('PDF'); 
+      $derivatives = array('PDF');
       $missing = str_replace('OBJ ','',$missing);  // No OBJ required here.
       -- $mCountR;
       break;
     case 'pageCModel' :
-      $derivatives = array('PDF','TIFF','JPG','OCR','JP2','RAW_HOCR','HOCR'); 
+      $derivatives = array('PDF','TIFF','JPG','OCR','JP2','RAW_HOCR','HOCR');
       $missing = str_replace('MODS ','',$missing);  // No MODS required here.
       -- $mCountR;
       break;
@@ -339,13 +339,13 @@ function ihc_identify_missing_datastreams($object, $cModel) {
       $derivatives = array('PDF','WARC_CSV','WARC_FILTERED','PNG','JPG','MEDIUM_SIZE');
       break;
   }
-  
+
   // Count and identify missing derivatives.
   $mCTotal = $mCountR;
   if (!empty($derivatives)) {
     foreach ($derivatives as $d) {
-      if (!$object[$d]) { 
-        $missing .= "$d "; 
+      if (!$object[$d]) {
+        $missing .= "$d ";
         ++ $mCTotal;
       }
     }
@@ -370,7 +370,7 @@ function ihc_identify_missing_datastreams($object, $cModel) {
  * @return type
  */
 function ihc_special_case2($oldContent) {
-  module_load_include('inc', 'icu', 'icu');
+  module_load_include('inc', 'idu', 'icu');
 
   if (empty($oldContent)) { return FALSE; }
   $jpegs = $tiffs = 0;
@@ -390,43 +390,43 @@ function ihc_special_case2($oldContent) {
 
 /**
  * Apply assessment rules to one row ($columns) of data.
- * 
+ *
  * @param array $columns
  *    The row of data to be analyzed.
  * @return array
  *   An associative array of format codes in $column => $code form.
  */
 function ihc_apply_rules(array $columns) {
-  module_load_include('inc', 'icu', 'icu');
+  module_load_include('inc', 'idu', 'icu');
 
   $row = array( );
   $isGreen = TRUE;
-  
+
   // Get the object...
   $pid = $columns[2];
   if ($pid === '*None*') {
-    $row[2] = 'SOFT'; 
+    $row[2] = 'SOFT';
     return $row;
   }
-  
+
   // Not skipped, eh?  Check the object state and report.
   if (!empty($columns[3])) {
     list($fixed, $state) = icu_get_count_and_content($columns[3]);
-    if ($state != "A") { 
-      $row[2] = 'SOFT'; 
+    if ($state != "A") {
+      $row[2] = 'SOFT';
       return $row;
     }
   }
-  
-  // Ok, we have an active object...get busy.  Start by reporting some basic info. 
+
+  // Ok, we have an active object...get busy.  Start by reporting some basic info.
   $row[2] = 'BOLD';
-  
+
   // Report the total number of datastreams.
   if (!empty($columns[4])) {
-    $nDS = $columns[4]; 
+    $nDS = $columns[4];
     if ($nDS > 19) { $row[4] = 'YELLOW'; }
   }
-  
+
   // Check the CModels.  If no RELS-EXT...report that here.
   if (!empty($columns[5])) {
     $cm = $columns[5];
@@ -437,15 +437,15 @@ function ihc_apply_rules(array $columns) {
     } else {
       list($nCM, $cModel) = icu_change_object_cmodel($cm);
       if ($nCM > 2) {
-        $row[5] = 'RED'; 
+        $row[5] = 'RED';
         $isGreen = FALSE;
       } else if ($nCM != 1 ) {
-        $row[5] = 'YELLOW'; 
+        $row[5] = 'YELLOW';
       }
     }
   }
-  
-  // Fetch and report all the parent (isMemberOfCollection, isConstituentOf and 
+
+  // Fetch and report all the parent (isMemberOfCollection, isConstituentOf and
   // isPageOf) relationships.
   if (!empty($columns[6])) {
     list($nRel, $parent) = icu_change_object_cmodel($columns[6]);
@@ -454,16 +454,16 @@ function ihc_apply_rules(array $columns) {
       $isGreen = FALSE;
     }
   }
-  
+
   // Check the OBJ datastream.
-  if (!empty($columns[7])) {  
+  if (!empty($columns[7])) {
     $OBJMimes = icu_OBJMimes( );
     $mime = $columns[7];
     if (!isset($OBJMimes[$cModel])) {
       $row[7] = 'YELLOW';               // better check our icu_OBJMimes list!
     } else {
       $expected = $OBJMimes[$cModel];
-      if ($mime != $expected) { 
+      if ($mime != $expected) {
         $row[7] = 'RED';                // red if not the expected type
         $isGreen = FALSE;
       }
@@ -473,23 +473,23 @@ function ihc_apply_rules(array $columns) {
   // Bad mimes...always red if not blank.
   if (!empty($columns[8])) {
     $bad = $columns[8];
-    if (strlen($bad) > 0 ) { 
-      $row[8] = 'RED'; 
+    if (strlen($bad) > 0 ) {
+      $row[8] = 'RED';
       $isGreen = FALSE;
     }
   }
-  
+
   // Other DSIDs, $row[9], is OK, no rules to apply.
-  
+
   // Missing datastreams...red for ! missing required DS, yellow otherwise.
   // Except... RAW_HOCR's are not absolutely required, neither are TECHMDs.
   static $allowed = array('[1] TECHMD', '[1] RAW_HOCR');
 
   if (!empty($columns[10])) {
     $missing = $columns[10];
-    if (strlen($missing) > 0 ) { 
+    if (strlen($missing) > 0 ) {
       if (strstr($missing, '!')) {
-        $row[10] = 'RED'; 
+        $row[10] = 'RED';
         $isGreen = FALSE;
       } else if (!in_array($missing, $allowed)) {
         $row[10] = 'YELLOW';
@@ -498,17 +498,17 @@ function ihc_apply_rules(array $columns) {
       }
     }
   }
-  
+
   // Check for old content issues.
   if (!empty($columns[11])) {
     if (strlen($columns[11]) < 1) {
       $row[11] = 'YELLOW';           // No old content?
       $count = 0;
     }
-        
+
     // If the OLD content count is greater than 1 and this is not a compoundCModel...big problem!
-    if ($count > 1 && $cModel != 'compoundCModel') { 
-      $row[5] = 'RED'; 
+    if ($count > 1 && $cModel != 'compoundCModel') {
+      $row[5] = 'RED';
       $isGreen = FALSE;
     }
   }
@@ -624,7 +624,7 @@ function ihc_apply_rules(array $columns) {
   //
 
   if ($cModel == 'compoundCModel' && ihc_special_case2($columns[11])) {   // Special case 2... TIFF/JPEG pairs!
-    $row[2] = 'ORANGE';    
+    $row[2] = 'ORANGE';
     $isGreen = FALSE;
   }
 
@@ -641,8 +641,8 @@ function ihc_apply_rules(array $columns) {
   }
 
   // If $isGreen is TRUE, set the full PID to green!
-  if ($isGreen) { $row[2] = 'GREEN'; } 
-      
+  if ($isGreen) { $row[2] = 'GREEN'; }
+
   return $row;
 }
 
@@ -650,7 +650,7 @@ function ihc_apply_rules(array $columns) {
  * Fill a row of the worksheet ($filled) with existing data and format codes.
  *
  * Fill undefined/empty cells in the CSV data with 'NONE' for reporting.
- * 
+ *
  * @param array $columns
  *   Associative array of $col => $data pairs.
  * @param array $codes
@@ -693,4 +693,3 @@ function ihc_fill_sheet($columns, $codes) {
   }
   return $filled;
 }
-

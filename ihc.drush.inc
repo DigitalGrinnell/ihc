@@ -40,14 +40,14 @@
 
 /**
  * Some available drush functions...
- * 
+ *
  * drush_log('Log an event using drush', 'warning');
  * drush_set_error('Set an error with drush.');
  * dt('Translate strings with drush');
  * drush_print('Print to command line with drush');
  * drush_print_table($rows, TRUE); //print a command line table with drush
  * drush_confirm('Are you sure you want to continue?', $indent = 0); //Add drush confirmation
- * 
+ *
  */
 
 /** Callbacks */
@@ -79,7 +79,7 @@ function drush_ihc_ihcModReset($pid) {
  *   First PID, with or without a 'namespace:' prefix, to process.
  */
 function drush_ihc_ihcCollect($first) {
-  module_load_include('inc', 'icu', 'object_record');
+  module_load_include('inc', 'idu', 'object_record');
 
   list($ns, $pidn) = explode(':', $first);
   $functionStamp = __FUNCTION__.'_'.$ns;
@@ -123,7 +123,7 @@ function drush_ihc_ihcCollect($first) {
  *   First PID, with or without a 'namespace:' prefix, to process.
  */
 function drush_ihc_ihcAnalyze($first) {
-  module_load_include('inc', 'icu', 'object_record');
+  module_load_include('inc', 'idu', 'object_record');
 
   list($ns, $pidn) = explode(':', $first);
   $functionStamp = __FUNCTION__.'_'.$ns;
@@ -173,7 +173,7 @@ function drush_ihc_ihcAnalyze($first) {
  *   is used.
  */
 function drush_ihc_ihcReport($first, $file=NULL) {
-  module_load_include('inc', 'icu', 'object_record');
+  module_load_include('inc', 'idu', 'object_record');
 
   list($ns, $pidn) = explode(':', $first);
   if (!$pids = ihc_drush_prep($first)) { return; }     // Get the PIDs and initialize the loop..
@@ -443,7 +443,7 @@ function ihc_drush_help($command) {
  *
  */
 function ihc_drush_prep($pidSpec, $lastOp='2000-01-01T00:00:00Z') {
-  module_load_include('inc', 'icu', 'icu_drush');
+  module_load_include('inc', 'idu', 'icu_drush');
   $last = $pidn = $range = $namespace = 0;
   return icu_drush_prep($pidSpec, $last, $pidn, $range, $namespace, $lastOp);
 }
@@ -461,7 +461,7 @@ function ihc_drush_prep($pidSpec, $lastOp='2000-01-01T00:00:00Z') {
  *   Returns an updated '[count] list' or FALSE for no change.
  */
 function ihc_drush_add_child_to_list($kids, $newKid) {
-  module_load_include('inc', 'icu', 'icu');
+  module_load_include('inc', 'idu', 'icu');
 
   $children = array( );
 
@@ -534,8 +534,8 @@ function ihc_drush_add_child_to_list($kids, $newKid) {
  *   An associative array of format codes in $column => $code form.
  */
 function ihc_drush_apply_rules(array $columns) {
-  module_load_include('inc', 'icu', 'icu');
-  
+  module_load_include('inc', 'idu', 'icu');
+
   $row = array( );
   $isGreen = TRUE;
 
@@ -1367,7 +1367,7 @@ function ihc_drush_post_to_file($comment, $command, $path=NULL) {
  *                   3) number of DG6 downloads, and 4) number of DG7 downloads.
  */
 function ihc_return_awstats($pid) {
-  module_load_include('inc', 'icu', 'object_record');
+  module_load_include('inc', 'idu', 'object_record');
   if (is_null($pid) || stripos($pid, ':') < 2) { return array(0, 0, 0, 0); }
 
   // OK, collect the data.
@@ -1489,5 +1489,3 @@ function ihc_add_awstats_to_record($m, &$rec, $v6, $v7, $d6, $d7) {
   $rec[$dCol] = $d6 + $d7;
   return $rec;
 }
-
-

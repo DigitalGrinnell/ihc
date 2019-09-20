@@ -3,6 +3,6 @@ name = Islandora Health Check (IHC)
 description = Drupal 7 custom module to collect, analyze and report (via Excel XLSX) on the health of Islandora objects and their datastreams.
 package = ICG Modules
 core = 7.x
-dependencies[] = icu
+dependencies[] = idu
 dependencies[] = phpexcel
 files[] = ihc.module
