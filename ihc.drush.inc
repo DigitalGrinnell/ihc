@@ -997,15 +997,18 @@ function ihc_drush_collect_object_health($pid) {
   // If this is a compound... fetch all the constituents belonging to it.
   if ($cModel === 'compoundCModel') {
     $follow = drush_get_option('follow', FALSE);
-    $pages = islandora_compound_object_get_parts($object->id);
-    sort($pages);
-    foreach ($pages as $page) {
-      list($cns, $c) = explode(':', $page);
-      if ($follow) { $toFollow[] = $page; }
-      if (!empty($data['G'])) {  // add this to the list of kids
-        if ($updatedKids = ihc_drush_add_child_to_list($data['G'], $c))  { $data['G'] = $updatedKids; }
-      } else {
-        $data['G'] = "[1] $c";
+    if (!$pages = islandora_compound_object_get_parts($object->id)) {
+      $data['G'] = "[0] No children!";
+    } else {
+      sort($pages);
+      foreach ($pages as $page) {
+        list($cns, $c) = explode(':', $page);
+        if ($follow) { $toFollow[] = $page; }
+        if (!empty($data['G'])) {  // add this to the list of kids
+          if ($updatedKids = ihc_drush_add_child_to_list($data['G'], $c))  { $data['G'] = $updatedKids; }
+        } else {
+          $data['G'] = "[1] $c";
+        }
       }
     }
 
